@@ -1,0 +1,6 @@
+mode: simple
+ignored_config_entities:
+  - 'canvas.component.block.*'
+  - 'canvas.component.sdc.*'
+  - 'canvas.content_template.*'
+  - 'canvas.folder.*'

@@ -1,0 +1,36 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - canvas.component.sdc.tailwind.content
+    - canvas.component.sdc.tailwind.page_header
+    - canvas.component.sdc.tailwind.rich_text
+    - core.entity_view_mode.node.full
+    - field.field.node.page.body
+    - filter.format.basic_html
+    - node.type.page
+  module:
+    - node
+id: node.page.full
+content_entity_type_id: node
+content_entity_type_bundle: page
+content_entity_type_view_mode: full
+component_tree:
+  0:
+    uuid: 20108767-8aaa-4d8f-a43b-30ff5ec4c3d9
+    component_id: sdc.tailwind.page_header
+    component_version: afc25d2d2df22a23
+    inputs: '{"title":{"sourceType":"dynamic","expression":"\u2139\ufe0e\u241centity:node:page\u241dtitle\u241e\u241fvalue"},"container":"narrow"}'
+  1:
+    uuid: 9d7d2a28-7a3d-4000-8c77-3dfe1c33c223
+    component_id: sdc.tailwind.content
+    component_version: 42b2037f234751f8
+    inputs: '{"container":"narrow"}'
+  '1:children:0':
+    parent_uuid: 9d7d2a28-7a3d-4000-8c77-3dfe1c33c223
+    slot: children
+    uuid: 5c8b84c9-5846-488a-95a5-d18faa489cac
+    component_id: sdc.tailwind.rich_text
+    component_version: 26e08336d0864221
+    inputs: '{"text":{"sourceType":"dynamic","expression":"\u2139\ufe0e\u241centity:node:page\u241dbody\u241e\u241fprocessed"}}'
+exposed_slots: {  }
