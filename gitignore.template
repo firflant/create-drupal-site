@@ -1,0 +1,32 @@
+# Ignore dependencies that are managed with Composer.
+/vendor/
+
+# Drush wrapper (generated during deployment for shared hosting)
+/drush-wrapper.sh
+
+# System files
+.DS_Store
+
+# Ignore core when managing all of a project's dependencies with Composer
+# including Drupal core.
+web/core
+
+# Ignore configuration files that may contain sensitive information.
+web/sites/*/settings*.php
+web/sites/*/services*.yml
+
+# Ignore paths that contain user-generated content.
+web/sites/*/files
+web/sites/*/private
+
+# Ignore multi-site test environment.
+web/sites/simpletest
+
+# Contributed modules, themes, and profiles
+web/modules/contrib/
+web/themes/contrib/
+web/profiles/contrib/
+
+# Composer-managed libraries (installed via type:drupal-library)
+web/libraries/
+web/autoload.php
