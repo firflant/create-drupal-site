@@ -1,0 +1,42 @@
+# Drupal 11 Project
+
+## Essential Rules
+
+- Web root is `/web/`
+- Custom modules go in `/web/modules/custom/`
+- Custom themes go in `/web/themes/custom/`
+- **Active theme: `tailwind` (Tailwind CSS) at `/web/themes/custom/tailwind/`**
+- Configuration lives in `/config/sync/`
+- Use Composer for all dependencies
+- Never hack core or contrib modules
+- DDEV is used for local development
+
+## Workflow
+
+After making changes:
+1. Export config: `ddev drush cex`
+2. Clear cache: `ddev drush cr`
+
+## Code Standards
+
+- Follow Drupal Coding Standards
+- Always avoid code redundancy
+- Use strict types: `declare(strict_types=1);`
+- Use dependency injection (not static calls)
+- Use Drupal APIs (not raw PHP globals)
+- Sanitize output: `Html::escape()`, `Xss::filter()`
+- Type hint parameters and return types
+
+## Naming
+
+- Modules: `snake_case`
+- Classes: `PascalCase`
+- Methods: `camelCase`
+- Hooks: `snake_case` (e.g., `hook_form_alter`)
+
+## Common Commands
+
+- `ddev drush cr` - Clear cache
+- `ddev drush cex` - Export config
+- `ddev drush cim` - Import config
+- `ddev drush uli` - Login link
