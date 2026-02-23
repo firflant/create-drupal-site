@@ -24,12 +24,13 @@ ddev composer require drush/drush
 ddev drush site:install minimal --account-name=admin --account-pass=admin --site-name="$SITE_NAME" -y
 
 
-# 2. Required contrib modules
+# 2. Required contrib modules and admin theme
 ddev composer require \
   drupal/canvas \
   drupal/config_ignore \
   drupal/filefield_paths:^1.0@RC \
   drupal/focal_point \
+  drupal/gin:^5.0 \
   drupal/imageapi_optimize \
   drupal/page_analytics:^1.0@beta \
   drupal/token
@@ -39,13 +40,12 @@ ddev composer require \
 mkdir -p web/themes/custom/tailwind && rsync -a --exclude='.git' "$TAILWIND_DIR/" web/themes/custom/tailwind/
 
 
-# 4. Enable themes (Claro for admin; Tailwind for front)
-ddev drush theme:enable claro -y
+# 4. Enable themes (Gin for admin; Tailwind for front)
 ddev drush theme:enable tailwind -y
+ddev drush theme:enable gin -y
+ddev drush config:set system.theme admin gin -y
 
-
-# 5. Core recipes (paths relative to Drupal root = web/)
-ddev drush recipe core/recipes/core_recommended_admin_theme
+# 5. Core recipes
 ddev drush recipe core/recipes/page_content_type
 ddev drush recipe core/recipes/content_editor_role
 ddev drush recipe core/recipes/basic_html_format_editor
@@ -53,7 +53,7 @@ ddev drush recipe core/recipes/image_media_type
 
 
 # 6. Enable modules
-ddev drush pm:enable -y views views_ui config field field_ui menu_ui filter text contextual file toolbar editor canvas config_ignore filefield_paths focal_point imageapi_optimize page_analytics token
+ddev drush pm:enable -y views views_ui config field field_ui menu_ui filter text contextual file navigation editor canvas config_ignore filefield_paths focal_point imageapi_optimize page_analytics token
 
 
 # 7. Copy project config and import
@@ -63,7 +63,6 @@ cp "$SCRIPT_DIR"/config/*.yml config/sync/
 ddev drush config:set system.site page.front /node -y
 ddev drush config:set system.theme default tailwind -y
 ddev drush cim -y --partial
-# Export so config/sync matches this site (avoids "different site" on sync UI).
 ddev drush cex -y
 
 
