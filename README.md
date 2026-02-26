@@ -39,3 +39,8 @@ Make sure that your hosting environment allows Composer, Drush, and Node.js (for
 ### Deploying the site on shared hosting platforms that do not support Node.js
 
 Remove the `dist/` line from the .gitignore file in `web/themes/custom/tailwind`, then make sure you run `yarn build`and commit the generated stylesheet file before you push your local changes to git.
+
+
+## Contribution
+
+If you have a suggestions to this one-line Drupal installator, [raise an issue](https://github.com/firflant/create-drupal-site/issues/new) on this repo, but ideally, mention me on Drupal's Slack @firflant, or PM me.
