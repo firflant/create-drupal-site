@@ -15,7 +15,7 @@ It sets up a Drupal site from scratch with the most commonly required modules, i
 From the directory where you want the Drupal app (e.g. parent of this project), run:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/firflant/create-drupal-site/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/firflant/create-drupal-site/main/create-drupal-site.sh | bash
 ```
 
 The script will prompt for **site name** (default "My site") and **DDEV project name** (default kebab-case of site name), then:
