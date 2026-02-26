@@ -1,9 +1,22 @@
 #!/usr/bin/env bash
 set -e
 
-# Paths: script dir = where this script lives; tailwind = sibling (override with env)
+# Paths: script dir = where this script lives
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-TAILWIND_DIR="${TAILWIND_DIR:-$(dirname "$SCRIPT_DIR")/tailwind}"
+
+# When run via "curl ... | bash", there is no script file so SCRIPT_DIR is wrong and we have no
+# config/templates. Clone the repo and re-exec so the rest of the script sees the real repo root.
+REPO_URL="${CREATE_DRUPAL_SITE_REPO:-https://github.com/firflant/create-drupal-site.git}"
+if [ ! -f "$SCRIPT_DIR/deploy.sh.template" ]; then
+  CLONE_DIR=$(mktemp -d)
+  echo "Fetching create-drupal-site from GitHub..."
+  git clone --depth 1 "$REPO_URL" "$CLONE_DIR"
+  exec env CREATE_DRUPAL_SITE_CLONE="$CLONE_DIR" bash "$CLONE_DIR/install.sh"
+fi
+# Clean up the temporary clone when we exit (we were re-exec'd from it).
+if [ -n "${CREATE_DRUPAL_SITE_CLONE-}" ] && [ -d "${CREATE_DRUPAL_SITE_CLONE}" ]; then
+  trap 'rm -rf "${CREATE_DRUPAL_SITE_CLONE}"' EXIT
+fi
 
 read -p "Site name [My site]: " SITE_NAME
 SITE_NAME="${SITE_NAME:-My site}"
@@ -36,8 +49,12 @@ ddev composer require \
   drupal/token
 
 
-# 3. Theme (copy without .git so we get files only, not a repo)
-mkdir -p web/themes/custom/tailwind && rsync -a --exclude='.git' "$TAILWIND_DIR/" web/themes/custom/tailwind/
+# 3. Theme (fetch from GitHub, copy without .git)
+TAILWIND_THEME_REPO="${TAILWIND_THEME_REPO:-https://github.com/firflant/tailwind-canvas.git}"
+THEME_CLONE=$(mktemp -d)
+git clone --depth 1 "$TAILWIND_THEME_REPO" "$THEME_CLONE"
+mkdir -p web/themes/custom/tailwind && rsync -a --exclude='.git' "$THEME_CLONE/" web/themes/custom/tailwind/
+rm -rf "$THEME_CLONE"
 
 
 # 4. Enable themes (Gin for admin; Tailwind for front)
@@ -96,8 +113,8 @@ cd web/themes/custom/tailwind
 export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
 if [ -s "$NVM_DIR/nvm.sh" ]; then
   . "$NVM_DIR/nvm.sh"
+  nvm use
 fi
-nvm use
 yarn install
 yarn build:dev
 cd - > /dev/null
@@ -106,11 +123,13 @@ cd - > /dev/null
 # 11. Cache and launch
 ddev drush cr
 ddev launch
-echo "Done. One-time login link:"
-ddev drush uli
-echo "Run 'yarn dev' in web/themes/custom/tailwind when developing to watch and rebuild styles."
 
 # 12. Git repository initialization
 git init
 git add .
 git commit -m "Initial commit"
+
+# 13. Finish up
+echo "Done. One-time login link:"
+ddev drush uli
+echo "Run 'yarn dev' in web/themes/custom/tailwind when developing to watch and rebuild styles."

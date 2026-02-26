@@ -14,18 +14,17 @@ It sets up a Drupal site from scratch with the most commonly required modules, i
 From the directory where you want the Drupal app (e.g. parent of this project), run:
 
 ```bash
-/path/to/create_drupal_site/install.sh
+curl -fsSL https://raw.githubusercontent.com/firflant/create-drupal-site/main/install.sh | bash
 ```
 
 The script will prompt for **site name** (default "My site") and **DDEV project name** (default kebab-case of site name), then:
 
-- Create `app`, install Drupal minimal, require contrib modules, copy the Tailwind theme
-- Enable Claro, apply core recipes (admin theme, page content type, content editor role, basic HTML editor, image media type)
+- Create `app`, install Drupal minimal, require contrib modules, fetch the [Tailwind theme](https://github.com/firflant/tailwind-canvas) from GitHub
+- Apply core recipes (admin theme, page content type, content editor role, basic HTML editor, image media type)
 - Enable Canvas and other modules plus Tailwind theme, copy this project’s config into `config/sync`, set front page to `/node`, import config
 - Build theme styles, clear cache, launch, and print a one-time login link
 
-- **Tailwind theme:** By default the script expects the Tailwind theme as a sibling of this project (e.g. `../tailwind`). Override with `TAILWIND_DIR=/path/to/tailwind` if needed.
-- For ongoing development, run `yarn dev` in `/web/themes/custom/tailwind` to watch and rebuild styles.
+- For ongoing development, run `yarn dev` in `web/themes/custom/tailwind` to watch and rebuild styles.
 
 
 ## Release
