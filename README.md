@@ -8,6 +8,7 @@ It sets up a Drupal site from scratch with the most commonly required modules, i
 
 - [DDEV](https://ddev.com/get-started/) - the most popular dev server for local Drupal development must be installed on your system.
 - [Yarn](https://yarnpkg.com/getting-started/install) - a JS package manager and Node.js script runner for building the Tailwind assets.
+- [Git](https://git-scm.com/) - for versioning your project; also used to fetch the installer and Tailwind theme from GitHub.
 
 ## Usage
 
