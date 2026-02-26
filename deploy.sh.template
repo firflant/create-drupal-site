@@ -1,0 +1,182 @@
+#!/bin/bash
+
+###############################################################################
+# Drupal 11 Production Deployment Script
+#
+# This script handles the full deployment pipeline for the Drupal 11 project
+# with Tailwind CSS theme.
+###############################################################################
+
+set -e  # Exit on any error
+
+# Get the directory where the script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+
+# Drush wrapper setup for shared hosting with noexec mount restrictions.
+# Problem: Project directory is mounted with 'noexec', preventing script execution.
+# This causes Drush subprocesses (e.g., during 'updatedb') to fail when executing vendor/bin/drush.
+# Solution: Create executable wrapper in /tmp (bypasses noexec) and symlink vendor/bin/drush to it.
+# We also call Drush via PHP directly to avoid permission issues for main calls.
+
+# Create wrapper script in project root for DRUSH environment variable (used by subprocesses)
+wrapper_path="$SCRIPT_DIR/drush-wrapper.sh"
+cat > "$wrapper_path" << 'WRAPPER_EOF'
+#!/bin/bash
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+php "$SCRIPT_DIR/vendor/drush/drush/drush.php" --root="$SCRIPT_DIR/web" "$@"
+WRAPPER_EOF
+chmod +x "$wrapper_path" 2>/dev/null || true
+
+# Set DRUSH env var so Drush subprocesses can find themselves (critical for 'updatedb' etc.)
+export DRUSH="$wrapper_path"
+export DRUSH_LAUNCHER_FALLBACK=0
+
+# Drush function that calls Drush via PHP directly (bypasses permission issues).
+# Note: Drush subprocesses still need vendor/bin/drush to be executable, which we fix separately.
+drush() {
+    export DRUSH="${DRUSH:-$SCRIPT_DIR/drush-wrapper.sh}"
+    export DRUSH_LAUNCHER_FALLBACK=0
+    php "$SCRIPT_DIR/vendor/drush/drush/drush.php" --root="$SCRIPT_DIR/web" "$@"
+}
+
+# Trap to ensure maintenance mode is disabled on script exit
+cleanup() {
+    local exit_code=$?
+    if [ $exit_code -ne 0 ]; then
+        echo ""
+        echo "=========================================="
+        echo "ERROR: Deployment failed!"
+        echo "Attempting to disable maintenance mode..."
+        echo "=========================================="
+        drush state:set system.maintenance_mode 0 2>/dev/null || true
+    fi
+    exit $exit_code
+}
+trap cleanup EXIT
+
+echo "=========================================="
+echo "Starting Drupal 11 Deployment Pipeline"
+echo "=========================================="
+
+echo ""
+echo "[1/8] Pulling latest code from Git..."
+echo "-------------------------------------------"
+git pull
+
+echo ""
+echo "[2/8] Enabling maintenance mode..."
+echo "-------------------------------------------"
+drush state:set system.maintenance_mode 1
+
+echo ""
+echo "[3/8] Installing Composer dependencies..."
+echo "-------------------------------------------"
+composer install --no-dev --optimize-autoloader --no-interaction
+
+echo ""
+echo "Fixing Drush permissions (composer may have recreated vendor/bin/drush)..."
+echo "-------------------------------------------"
+drush_path="$SCRIPT_DIR/vendor/bin/drush"
+
+if [ -f "$drush_path" ]; then
+    chmod +x "$drush_path" 2>/dev/null || true
+
+    # If file isn't executable or doesn't work, create /tmp wrapper and symlink to it.
+    # /tmp is typically not mounted with noexec, so we can execute files there.
+    if [ ! -x "$drush_path" ] || ! "$drush_path" --version >/dev/null 2>&1; then
+        tmp_wrapper="/tmp/drush-wrapper-$(whoami)-$$.sh"
+        cat > "$tmp_wrapper" << TMPWRAPPER_EOF
+#!/bin/bash
+SCRIPT_DIR="$SCRIPT_DIR"
+php "\$SCRIPT_DIR/vendor/drush/drush/drush.php" --root="\$SCRIPT_DIR/web" "\$@"
+TMPWRAPPER_EOF
+
+        chmod +x "$tmp_wrapper" 2>/dev/null || true
+
+        if [ -x "$tmp_wrapper" ] && "$tmp_wrapper" --version >/dev/null 2>&1; then
+            rm -f "$drush_path"
+            ln -s "$tmp_wrapper" "$drush_path" 2>/dev/null || cp "$tmp_wrapper" "$drush_path"
+            echo "✓ vendor/bin/drush is executable (using /tmp wrapper)"
+        else
+            echo "Warning: Could not create executable wrapper for vendor/bin/drush"
+        fi
+    else
+        echo "✓ vendor/bin/drush is executable"
+    fi
+else
+    # File doesn't exist - create /tmp wrapper and symlink to it
+    mkdir -p "$(dirname "$drush_path")" 2>/dev/null || true
+    tmp_wrapper="/tmp/drush-wrapper-$(whoami)-$$.sh"
+    cat > "$tmp_wrapper" << TMPWRAPPER_EOF
+#!/bin/bash
+SCRIPT_DIR="$SCRIPT_DIR"
+php "\$SCRIPT_DIR/vendor/drush/drush/drush.php" --root="\$SCRIPT_DIR/web" "\$@"
+TMPWRAPPER_EOF
+
+    chmod +x "$tmp_wrapper" 2>/dev/null || true
+    ln -s "$tmp_wrapper" "$drush_path" 2>/dev/null || cp "$tmp_wrapper" "$drush_path"
+    echo "✓ vendor/bin/drush created (using /tmp wrapper)"
+fi
+
+echo ""
+echo "[4/8] Building Tailwind CSS theme assets..."
+echo "-------------------------------------------"
+echo "Installing dependencies with --production=false to include devDependencies..."
+echo "Note: Tailwind CSS is in devDependencies as a build tool - needed to compile CSS, not at runtime"
+cd web/themes/custom/tailwind
+yarn install --frozen-lockfile --production=false
+yarn build
+cd "$SCRIPT_DIR"
+
+echo ""
+echo "[5/8] Importing configuration..."
+echo "-------------------------------------------"
+set +e  # Temporarily disable exit on error to handle field type change edge case
+drush config:import -y
+CONFIG_IMPORT_EXIT=$?
+set -e  # Re-enable exit on error
+
+if [ $CONFIG_IMPORT_EXIT -ne 0 ]; then
+  echo ""
+  echo "Config import failed (likely due to field type changes)."
+  echo "Running database updates to handle field migrations..."
+  echo "-------------------------------------------"
+  drush updatedb -y
+
+  echo ""
+  echo "Re-running config import after field cleanup..."
+  echo "-------------------------------------------"
+  drush config:import -y
+else
+  echo ""
+  echo "[6/8] Running database updates..."
+  echo "-------------------------------------------"
+  drush updatedb -y
+fi
+
+echo ""
+echo "[7/8] Rebuilding cache..."
+echo "-------------------------------------------"
+drush cache:rebuild
+
+echo ""
+echo "[8/8] Disabling maintenance mode..."
+echo "-------------------------------------------"
+drush state:set system.maintenance_mode 0
+
+echo ""
+echo "Verifying deployment..."
+echo "-------------------------------------------"
+drush status
+
+echo ""
+echo "=========================================="
+echo "Deployment completed successfully!"
+echo "=========================================="
+echo ""
+echo "Next steps:"
+echo "  - Verify the site is working correctly"
+echo "  - Check for any errors in logs"
+echo "  - Test critical functionality"
+echo ""

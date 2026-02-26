@@ -84,9 +84,11 @@ if ! grep -q 'twig.config:' web/sites/development.services.yml; then
 fi
 
 
-# 9. Dotfiles
+# 9. Dotfiles and deploy script
 cp "$SCRIPT_DIR/gitignore.template" .gitignore
 cp "$SCRIPT_DIR/cursorrules.template" .cursorrules
+cp "$SCRIPT_DIR/deploy.sh.template" deploy.sh
+chmod +x deploy.sh
 
 
 # 10. Style build
@@ -107,3 +109,8 @@ ddev launch
 echo "Done. One-time login link:"
 ddev drush uli
 echo "Run 'yarn dev' in web/themes/custom/tailwind when developing to watch and rebuild styles."
+
+# 12. Git repository initialization
+git init
+git add .
+git commit -m "Initial commit"
