@@ -11,7 +11,7 @@ if [ ! -f "$SCRIPT_DIR/deploy.sh.template" ]; then
   CLONE_DIR=$(mktemp -d)
   echo "Fetching create-drupal-site from GitHub..."
   git clone --depth 1 "$REPO_URL" "$CLONE_DIR"
-  exec env CREATE_DRUPAL_SITE_CLONE="$CLONE_DIR" bash "$CLONE_DIR/install.sh"
+  exec env CREATE_DRUPAL_SITE_CLONE="$CLONE_DIR" bash "$CLONE_DIR/install.sh" < /dev/tty
 fi
 # Clean up the temporary clone when we exit (we were re-exec'd from it).
 if [ -n "${CREATE_DRUPAL_SITE_CLONE-}" ] && [ -d "${CREATE_DRUPAL_SITE_CLONE}" ]; then
