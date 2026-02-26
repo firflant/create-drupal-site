@@ -6,8 +6,8 @@ It sets up a Drupal site from scratch with the most commonly required modules, i
 
 ## Prerequisites
 
-[DDEV](https://ddev.com/get-started/) - the most popular dev server for local Drupal development must be installed on your system.
-[Yarn](https://yarnpkg.com/getting-started/install) - a JS package manager and Node.js script runner for building the Tailwind assets.
+- [DDEV](https://ddev.com/get-started/) - the most popular dev server for local Drupal development must be installed on your system.
+- [Yarn](https://yarnpkg.com/getting-started/install) - a JS package manager and Node.js script runner for building the Tailwind assets.
 
 ## Usage
 
