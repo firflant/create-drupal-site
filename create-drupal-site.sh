@@ -103,9 +103,11 @@ fi
 
 # 9. Dotfiles and deploy script
 cp "$SCRIPT_DIR/gitignore.template" .gitignore
-cp "$SCRIPT_DIR/cursorrules.template" .cursorrules
+cp "$SCRIPT_DIR/AGENT.md.template" AGENT.md
 cp "$SCRIPT_DIR/deploy.sh.template" deploy.sh
-chmod +x deploy.sh
+cp "$SCRIPT_DIR/db-dump.sh.template" db-dump.sh
+cp "$SCRIPT_DIR/drush-noexec-workaround.sh.template" drush-noexec-workaround.sh
+chmod +x deploy.sh db-dump.sh drush-noexec-workaround.sh
 
 
 # 10. Style build

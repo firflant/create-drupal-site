@@ -13,32 +13,12 @@ set -e  # Exit on any error
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
-# Drush wrapper setup for shared hosting with noexec mount restrictions.
-# Problem: Project directory is mounted with 'noexec', preventing script execution.
-# This causes Drush subprocesses (e.g., during 'updatedb') to fail when executing vendor/bin/drush.
-# Solution: Create executable wrapper in /tmp (bypasses noexec) and symlink vendor/bin/drush to it.
-# We also call Drush via PHP directly to avoid permission issues for main calls.
-
-# Create wrapper script in project root for DRUSH environment variable (used by subprocesses)
-wrapper_path="$SCRIPT_DIR/drush-wrapper.sh"
-cat > "$wrapper_path" << 'WRAPPER_EOF'
-#!/bin/bash
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-php "$SCRIPT_DIR/vendor/drush/drush/drush.php" --root="$SCRIPT_DIR/web" "$@"
-WRAPPER_EOF
-chmod +x "$wrapper_path" 2>/dev/null || true
-
-# Set DRUSH env var so Drush subprocesses can find themselves (critical for 'updatedb' etc.)
-export DRUSH="$wrapper_path"
-export DRUSH_LAUNCHER_FALLBACK=0
-
-# Drush function that calls Drush via PHP directly (bypasses permission issues).
-# Note: Drush subprocesses still need vendor/bin/drush to be executable, which we fix separately.
-drush() {
-    export DRUSH="${DRUSH:-$SCRIPT_DIR/drush-wrapper.sh}"
-    export DRUSH_LAUNCHER_FALLBACK=0
-    php "$SCRIPT_DIR/vendor/drush/drush/drush.php" --root="$SCRIPT_DIR/web" "$@"
-}
+# [Optional on standard hosting - START] Auto-applies noexec workaround if vendor/bin/drush can't run directly.
+# Safe to remove if `vendor/bin/drush --version` works on your server without issues.
+if ! "$SCRIPT_DIR/vendor/bin/drush" --version >/dev/null 2>&1; then
+    source "$SCRIPT_DIR/drush-noexec-workaround.sh"
+fi
+# [Optional on standard hosting - END]
 
 # Trap to ensure maintenance mode is disabled on script exit
 cleanup() {
@@ -74,50 +54,12 @@ echo "[3/8] Installing Composer dependencies..."
 echo "-------------------------------------------"
 composer install --no-dev --optimize-autoloader --no-interaction
 
-echo ""
-echo "Fixing Drush permissions (composer may have recreated vendor/bin/drush)..."
-echo "-------------------------------------------"
-drush_path="$SCRIPT_DIR/vendor/bin/drush"
-
-if [ -f "$drush_path" ]; then
-    chmod +x "$drush_path" 2>/dev/null || true
-
-    # If file isn't executable or doesn't work, create /tmp wrapper and symlink to it.
-    # /tmp is typically not mounted with noexec, so we can execute files there.
-    if [ ! -x "$drush_path" ] || ! "$drush_path" --version >/dev/null 2>&1; then
-        tmp_wrapper="/tmp/drush-wrapper-$(whoami)-$$.sh"
-        cat > "$tmp_wrapper" << TMPWRAPPER_EOF
-#!/bin/bash
-SCRIPT_DIR="$SCRIPT_DIR"
-php "\$SCRIPT_DIR/vendor/drush/drush/drush.php" --root="\$SCRIPT_DIR/web" "\$@"
-TMPWRAPPER_EOF
-
-        chmod +x "$tmp_wrapper" 2>/dev/null || true
-
-        if [ -x "$tmp_wrapper" ] && "$tmp_wrapper" --version >/dev/null 2>&1; then
-            rm -f "$drush_path"
-            ln -s "$tmp_wrapper" "$drush_path" 2>/dev/null || cp "$tmp_wrapper" "$drush_path"
-            echo "✓ vendor/bin/drush is executable (using /tmp wrapper)"
-        else
-            echo "Warning: Could not create executable wrapper for vendor/bin/drush"
-        fi
-    else
-        echo "✓ vendor/bin/drush is executable"
-    fi
-else
-    # File doesn't exist - create /tmp wrapper and symlink to it
-    mkdir -p "$(dirname "$drush_path")" 2>/dev/null || true
-    tmp_wrapper="/tmp/drush-wrapper-$(whoami)-$$.sh"
-    cat > "$tmp_wrapper" << TMPWRAPPER_EOF
-#!/bin/bash
-SCRIPT_DIR="$SCRIPT_DIR"
-php "\$SCRIPT_DIR/vendor/drush/drush/drush.php" --root="\$SCRIPT_DIR/web" "\$@"
-TMPWRAPPER_EOF
-
-    chmod +x "$tmp_wrapper" 2>/dev/null || true
-    ln -s "$tmp_wrapper" "$drush_path" 2>/dev/null || cp "$tmp_wrapper" "$drush_path"
-    echo "✓ vendor/bin/drush created (using /tmp wrapper)"
+# [Optional on standard hosting - START] Re-establish /tmp symlink after Composer rebuilt vendor/ (see drush-noexec-workaround.sh)
+# Safe to remove alongside the block above if the noexec workaround is not needed on your server.
+if declare -f setup_drush_vendor_symlink >/dev/null 2>&1; then
+    setup_drush_vendor_symlink
 fi
+# [Optional on standard hosting - END]
 
 echo ""
 echo "[4/8] Building Tailwind CSS theme assets..."

@@ -16,6 +16,7 @@
 After making changes:
 1. Export config: `ddev drush cex`
 2. Clear cache: `ddev drush cr`
+3. Check the local development url: `ddev status`
 
 ## Code Standards
 
