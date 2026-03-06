@@ -113,16 +113,17 @@ yarn build:dev
 cd - > /dev/null
 
 
-# 11. Cache and launch
+# 11. Cache
 ddev drush cr
-ddev launch
+
 
 # 12. Git repository initialization
 git init
 git add .
 git commit -m "Initial commit"
 
+
 # 13. Finish up
 echo "Done. One-time login link:"
-ddev drush uli
+ddev launch $(ddev drush uli)
 echo "Run 'yarn dev' in web/themes/custom/tailwind when developing to watch and rebuild styles."
