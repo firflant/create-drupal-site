@@ -1,4 +1,6 @@
 parameters:
+  # Twig development settings
+  # These settings persist through Drupal core updates.
   twig.config:
     debug: true
     auto_reload: true

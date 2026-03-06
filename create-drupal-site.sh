@@ -89,16 +89,7 @@ sed -i.bak -e '/^# if (file_exists/s/^# //' -e '/^#   include /s/^# //' -e '/^# 
 cp web/sites/example.settings.local.php web/sites/default/settings.local.php
 # Uncomment cache backend null lines (render, page, dynamic_page_cache) for local development.
 sed -i.bak -e '/^#.*cache\.backend\.null/s/^# //' web/sites/default/settings.local.php
-# Ensure development.services.yml exists (scaffolded to web/sites/ by Drupal), then insert Twig dev config from template after "parameters:".
-if [ ! -f web/sites/development.services.yml ]; then
-  cp web/core/assets/scaffold/files/development.services.yml web/sites/development.services.yml
-fi
-if ! grep -q 'twig.config:' web/sites/development.services.yml; then
-  twig_insert=$(mktemp)
-  tail -n +2 "$SCRIPT_DIR/development.services.local.yml.template" > "$twig_insert"
-  sed -i.bak "/^parameters:/r $twig_insert" web/sites/development.services.yml
-  rm -f "$twig_insert"
-fi
+cp "$SCRIPT_DIR/development.services.local.yml.template" web/sites/development.services.local.yml
 
 
 # 9. Dotfiles and deploy script
