@@ -13,13 +13,6 @@ set -e  # Exit on any error
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
-# [Optional on standard hosting - START] Auto-applies noexec workaround if vendor/bin/drush can't run directly.
-# Safe to remove if `vendor/bin/drush --version` works on your server without issues.
-if ! "$SCRIPT_DIR/vendor/bin/drush" --version >/dev/null 2>&1; then
-    source "$SCRIPT_DIR/drush-noexec-workaround.sh"
-fi
-# [Optional on standard hosting - END]
-
 # Trap to ensure maintenance mode is disabled on script exit
 cleanup() {
     local exit_code=$?
@@ -45,21 +38,24 @@ echo "-------------------------------------------"
 git pull
 
 echo ""
-echo "[2/8] Enabling maintenance mode..."
-echo "-------------------------------------------"
-drush state:set system.maintenance_mode 1
-
-echo ""
-echo "[3/8] Installing Composer dependencies..."
+echo "[2/8] Installing Composer dependencies..."
 echo "-------------------------------------------"
 composer install --no-dev --optimize-autoloader --no-interaction
 
-# [Optional on standard hosting - START] Re-establish /tmp symlink after Composer rebuilt vendor/ (see drush-noexec-workaround.sh)
-# Safe to remove alongside the block above if the noexec workaround is not needed on your server.
-if declare -f setup_drush_vendor_symlink >/dev/null 2>&1; then
-    setup_drush_vendor_symlink
+# [Optional on standard hosting - START] Auto-applies noexec workaround if vendor/bin/drush can't run directly.
+# Safe to remove if `vendor/bin/drush --version` works on your server without issues.
+if ! "$SCRIPT_DIR/vendor/bin/drush" --version >/dev/null 2>&1; then
+    source "$SCRIPT_DIR/drush-noexec-workaround.sh"
+    if declare -f setup_drush_vendor_symlink >/dev/null 2>&1; then
+        setup_drush_vendor_symlink
+    fi
 fi
 # [Optional on standard hosting - END]
+
+echo ""
+echo "[3/8] Enabling maintenance mode..."
+echo "-------------------------------------------"
+drush state:set system.maintenance_mode 1
 
 echo ""
 echo "[4/8] Building Tailwind CSS theme assets..."
