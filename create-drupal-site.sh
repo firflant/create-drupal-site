@@ -108,8 +108,8 @@ if [ -s "$NVM_DIR/nvm.sh" ]; then
   . "$NVM_DIR/nvm.sh"
   nvm use
 fi
-yarn install
-yarn build:dev
+npm install
+npm run build
 cd - > /dev/null
 
 
@@ -126,4 +126,4 @@ git commit -m "Initial commit"
 # 13. Finish up
 echo "Done. One-time login link:"
 ddev launch $(ddev drush uli)
-echo "Run 'yarn dev' in web/themes/custom/tailwind when developing to watch and rebuild styles."
+echo "Run 'npm run dev' in web/themes/custom/tailwind when developing to watch and rebuild styles."

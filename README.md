@@ -6,8 +6,9 @@ It sets up a Drupal site from scratch with the most commonly required modules, i
 
 ## Prerequisites
 
+- [Drush](https://www.drush.org/13.x/install/) - the Drupal command-line tool
 - [DDEV](https://ddev.com/get-started/) - the most popular dev server for local Drupal development must be installed on your system.
-- [Yarn](https://yarnpkg.com/getting-started/install) - a JS package manager and Node.js script runner for building the Tailwind assets.
+- [Node.js](https://nodejs.org/) (includes npm) - for building the Tailwind assets.
 - [Git](https://git-scm.com/) - for versioning your project; also used to fetch the installer and Tailwind theme from GitHub.
 
 ## Usage
@@ -25,7 +26,7 @@ The script will prompt for **site name** (default "My site") and **DDEV project 
 - Enable Canvas and other modules plus Tailwind theme, copy this project’s config into `config/sync`, set front page to `/node`, import config
 - Build theme styles, clear cache, launch, and print a one-time login link
 
-- For ongoing development, run `yarn dev` in `web/themes/custom/tailwind` to watch and rebuild styles.
+- For ongoing development, run `npm run dev` in `web/themes/custom/tailwind` to watch and rebuild styles.
 
 
 ## Release
@@ -38,7 +39,7 @@ Make sure that your hosting environment allows Composer, Drush, and Node.js (for
 
 ### Deploying the site on shared hosting platforms that do not support Node.js
 
-Remove the `dist/` line from the .gitignore file in `web/themes/custom/tailwind`, then make sure you run `yarn build`and commit the generated stylesheet file before you push your local changes to git.
+Remove the `dist/` line from the .gitignore file in `web/themes/custom/tailwind`, then make sure you run `npm run build` and commit the generated stylesheet file before you push your local changes to git.
 
 
 ## Contribution
