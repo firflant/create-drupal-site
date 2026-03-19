@@ -6,10 +6,10 @@ dependencies:
   module:
     - contextual
     - file
+    - navigation
     - node
     - path
     - system
-    - toolbar
 id: content_editor
 label: 'Content editor'
 weight: 2
@@ -19,7 +19,7 @@ permissions:
   - 'access content overview'
   - 'access contextual links'
   - 'access files overview'
-  - 'access toolbar'
+  - 'access navigation'
   - 'administer url aliases'
   - 'create page content'
   - 'create url aliases'

@@ -1,9 +1,0 @@
-langcode: en
-status: true
-dependencies:
-  theme:
-    - tailwind
-id: tailwind.header
-region: header
-theme: tailwind
-component_tree: {  }

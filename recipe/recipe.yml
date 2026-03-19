@@ -1,0 +1,49 @@
+name: 'Create Drupal Site - Recipe'
+description: 'Enables required modules and applies base site configuration.'
+type: 'Site'
+recipes:
+  - core/recipes/page_content_type
+  - core/recipes/basic_html_format_editor
+  - core/recipes/image_media_type
+install:
+  - coffee
+  - config_ignore
+  - contextual
+  - editor
+  - field
+  - field_ui
+  - file
+  - filefield_paths
+  - filter
+  - focal_point
+  - help
+  - imageapi_optimize
+  - menu_ui
+  - page_analytics
+  - sam
+  - text
+  - token
+  - views
+  - views_ui
+config:
+  strict: false
+  import:
+    config_ignore:
+      - config_ignore.settings
+    user:
+      - system.action.user_add_role_action.content_editor
+      - system.action.user_remove_role_action.content_editor
+      - user.role.content_editor
+    views:
+      - views.view.content
+      - views.view.user_admin_people
+  actions:
+    system.site:
+      simpleConfigUpdate:
+        page.front: /node
+    user.role.authenticated:
+      grantPermissions:
+        - 'access coffee'
+        - 'access contextual links'
+        - 'access navigation'
+        - 'view the administration theme'
