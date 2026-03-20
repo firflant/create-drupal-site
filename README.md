@@ -1,47 +1,8 @@
 # Create Drupal Site
 
+> **Project moved**  
+> The canonical Git repository for this project now lives on [DrupalCode](https://www.drupal.org/project/create_drupal_site).
+
 A one-liner installation command for creating a new Drupal project locally.
 
 It sets up a Drupal site from scratch with the most commonly required modules, initial Canvas configuration, Canvas-engaged Tailwind theme, and a full development environment. It also provides a compatible CI/CD script for deploying your local changes to production hosting.
-
-## Prerequisites
-
-- [Drush](https://www.drush.org/13.x/install/) - the Drupal command-line tool
-- [DDEV](https://ddev.com/get-started/) - the most popular dev server for local Drupal development must be installed on your system.
-- [Node.js](https://nodejs.org/) (includes npm) - for building the Tailwind assets.
-- [Git](https://git-scm.com/) - for versioning your project; also used to fetch the installer and Tailwind theme from GitHub.
-
-## Usage
-
-From the directory where you want the Drupal app (e.g. parent of this project), run:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/firflant/create-drupal-site/main/create-drupal-site.sh | bash
-```
-
-The script will prompt for **site name** (default "My site"), **local project subdomain** (default kebab-case of site name; with DDEV this becomes your hostname, e.g. `https://my-site.ddev.site`), and **installation directory** (default: same as the subdomain), then:
-
-- Create that directory (relative to your current working directory), install Drupal minimal, require contrib modules, fetch the [Tailwind theme](https://github.com/firflant/tailwind-canvas) from GitHub
-- Apply core recipes (admin theme, page content type, content editor role, basic HTML editor, image media type)
-- Enable Canvas and other modules plus Tailwind theme, copy this project’s config into `config/sync`, set front page to `/node`, import config
-- Build theme styles, clear cache, launch, and print a one-time login link
-
-- For ongoing development, run `npm run dev` in `web/themes/custom/tailwind` to watch and rebuild styles.
-
-
-## Release
-
-Make sure that your hosting environment allows Composer, Drush, and Node.js (for building the Tailwind styles).
-
-1. Export the current configuration using `ddev drush cex -y` command
-2. Commit all changes to git and push them.
-3. On the configured hosting environment, go to the project directory and run `bash deploy.sh`.
-
-### Deploying the site on shared hosting platforms that do not support Node.js
-
-Remove the `dist/` line from the .gitignore file in `web/themes/custom/tailwind`, then make sure you run `npm run build` and commit the generated stylesheet file before you push your local changes to git.
-
-
-## Contribution
-
-If you have a suggestions to this one-line Drupal installator, [raise an issue](https://github.com/firflant/create-drupal-site/issues/new) on this repo, but ideally, mention me on Drupal's Slack @firflant, or PM me.
