@@ -18,23 +18,38 @@ if [ -n "${CREATE_DRUPAL_SITE_CLONE-}" ] && [ -d "${CREATE_DRUPAL_SITE_CLONE}" ]
   trap 'rm -rf "${CREATE_DRUPAL_SITE_CLONE}"' EXIT
 fi
 
-read -p "Site name [My site]: " SITE_NAME
-SITE_NAME="${SITE_NAME:-My site}"
+
+# Prompts: prompt_default → optional transform → require non-empty
+# Prompt with default shown in brackets; empty input uses default. Sets variable named $3.
+prompt_default() {
+  local _label="$1" _default="$2" _var="$3" _input
+  read -rp "${_label} [${_default}]: " _input
+  printf -v "$_var" '%s' "${_input:-$_default}"
+}
+
+prompt_default "Site name" "My site" SITE_NAME
 [[ -z "$SITE_NAME" ]] && { echo "Site name is required."; exit 1; }
 
-# Default DDEV project name = site name in kebab-case
 DEFAULT_PROJECT_NAME=$(echo "$SITE_NAME" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' | sed 's/-\+/-/g' | sed 's/^-//;s/-$//')
-read -p "DDEV project name [$DEFAULT_PROJECT_NAME]: " PROJECT_NAME
-PROJECT_NAME="${PROJECT_NAME:-$DEFAULT_PROJECT_NAME}"
+prompt_default "Local project subdomain" "$DEFAULT_PROJECT_NAME" PROJECT_NAME
+[[ -z "$PROJECT_NAME" ]] && { echo "Local project subdomain is required."; exit 1; }
 
-read -p "Theme [tailwind]: " THEME_NAME
-THEME_NAME="${THEME_NAME:-tailwind}"
+prompt_default "Installation directory" "$PROJECT_NAME" INSTALL_DIR
+INSTALL_DIR="${INSTALL_DIR#"${INSTALL_DIR%%[![:space:]]*}"}"
+INSTALL_DIR="${INSTALL_DIR%"${INSTALL_DIR##*[![:space:]]}"}"
+[[ -z "$INSTALL_DIR" ]] && { echo "Installation directory is required."; exit 1; }
+[[ "$INSTALL_DIR" == *..* ]] && { echo "Installation directory must not contain '..'."; exit 1; }
+case "$INSTALL_DIR" in
+  /*) echo "Installation directory must be a relative path."; exit 1 ;;
+esac
+
+prompt_default "Theme" "tailwindcss" THEME_NAME
 THEME_NAME=$(echo "$THEME_NAME" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9_]//g')
 [[ -z "$THEME_NAME" ]] && { echo "Theme name is required."; exit 1; }
 
 
 # 1. Create project
-mkdir -p app && cd app
+mkdir -p "$INSTALL_DIR" && cd "$INSTALL_DIR"
 ddev config --project-type=drupal11 --docroot=web --project-name="$PROJECT_NAME"
 ddev start
 ddev composer create-project "drupal/recommended-project:^11" .
@@ -73,59 +88,8 @@ ddev drush pm:enable -y canvas
 
 
 # 5. Enable front-end theme
-THEME_PATH=""
-THEME_SHOULD_BUILD=false
-if [ "$THEME_NAME" = "tailwind" ]; then
-  TAILWIND_THEME_REPO="${TAILWIND_THEME_REPO:-https://github.com/firflant/tailwind-canvas.git}"
-  mkdir -p web/themes/custom
-  git clone --depth 1 "$TAILWIND_THEME_REPO" web/themes/custom/tailwind
-  rm -rf web/themes/custom/tailwind/.git
-  THEME_PATH="web/themes/custom/tailwind"
-  THEME_SHOULD_BUILD=true
-else
-  DRUPAL_API=$(curl -s "https://www.drupal.org/api-d7/node.json?type=project_theme&field_project_machine_name=$THEME_NAME")
-  if echo "$DRUPAL_API" | grep -q '"list":\[\]'; then
-    echo "Theme '$THEME_NAME' not found on drupal.org."
-    exit 1
-  fi
-  if echo "$DRUPAL_API" | grep -q '"id":"3060"'; then
-    THEME_PATH="web/core/themes/${THEME_NAME}"
-  else
-    GITLAB_PROJECT=$(curl -s "https://git.drupalcode.org/api/v4/projects/project%2F${THEME_NAME}")
-    BRANCH=$(echo "$GITLAB_PROJECT" | grep -o '"default_branch":"[^"]*"' | cut -d'"' -f4)
-    if [ -z "$BRANCH" ]; then
-      for b in 11.x 10.x 2.0.x 2.x 1.x; do
-        if curl -s -o /dev/null -w "%{http_code}" "https://git.drupalcode.org/project/${THEME_NAME}/-/raw/${b}/${THEME_NAME}.info.yml" | grep -q 200; then
-          BRANCH="$b"
-          break
-        fi
-      done
-    fi
-    IS_STARTERKIT=false
-    if [ -n "$BRANCH" ]; then
-      if curl -s -o /dev/null -w "%{http_code}" "https://git.drupalcode.org/project/${THEME_NAME}/-/raw/${BRANCH}/${THEME_NAME}.starterkit.yml" | grep -q 200; then
-        IS_STARTERKIT=true
-      else
-        INFO_YML=$(curl -s "https://git.drupalcode.org/project/${THEME_NAME}/-/raw/${BRANCH}/${THEME_NAME}.info.yml")
-        if echo "$INFO_YML" | grep -qE 'starterkit:[[:space:]]*true'; then
-          IS_STARTERKIT=true
-        fi
-      fi
-    fi
-    if [ "$IS_STARTERKIT" = true ]; then
-      mkdir -p web/themes/custom
-      git clone --depth 1 "https://git.drupalcode.org/project/${THEME_NAME}.git" "web/themes/custom/${THEME_NAME}"
-      rm -rf "web/themes/custom/${THEME_NAME}/.git"
-      THEME_PATH="web/themes/custom/${THEME_NAME}"
-      THEME_SHOULD_BUILD=true
-    else
-      ddev composer require "drupal/${THEME_NAME}"
-      THEME_PATH="web/themes/contrib/${THEME_NAME}"
-    fi
-  fi
-fi
-ddev drush theme:enable "$THEME_NAME" -y
-ddev drush config:set system.theme default "$THEME_NAME" -y
+# shellcheck source=helpers/frontend_theme.sh
+source "$SCRIPT_DIR/helpers/frontend_theme.sh"
 
 
 # 6. Export config
@@ -158,28 +122,9 @@ cp "$SCRIPT_DIR/templates/drush-noexec-workaround.sh" drush-noexec-workaround.sh
 chmod +x deploy.sh production-setup.sh db-dump.sh drush-noexec-workaround.sh
 
 
-# 9. Build styles (only for custom themes with package.json and build/production script)
-THEME_WAS_BUILT=false
-if [ "$THEME_SHOULD_BUILD" = true ] && [ -f "$THEME_PATH/package.json" ]; then
-  BUILD_SCRIPT=""
-  if grep -q '"build"' "$THEME_PATH/package.json"; then
-    BUILD_SCRIPT="build"
-  elif grep -q '"production"' "$THEME_PATH/package.json"; then
-    BUILD_SCRIPT="production"
-  fi
-  if [ -n "$BUILD_SCRIPT" ]; then
-    cd "$THEME_PATH"
-    export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
-    if [ -s "$NVM_DIR/nvm.sh" ]; then
-      . "$NVM_DIR/nvm.sh"
-      [ -f .nvmrc ] && nvm use || true
-    fi
-    npm install
-    npm run "$BUILD_SCRIPT"
-    cd - > /dev/null
-    THEME_WAS_BUILT=true
-  fi
-fi
+# 9. Build theme assets
+# shellcheck source=helpers/build_theme_assets.sh
+source "$SCRIPT_DIR/helpers/build_theme_assets.sh"
 
 
 # 10. Rebuild cache
@@ -189,12 +134,36 @@ ddev drush cr
 # 11. Initialize git repository
 git init
 git add .
-git commit -m "Initial commit"
+git commit -q -m "Initial commit"
 
 
-# 12. Done
-echo "Done."
-ddev launch $(ddev drush uli)
-if [ "$THEME_WAS_BUILT" = true ]; then
-  echo "Run 'npm run dev' in $THEME_PATH when developing to watch and rebuild styles."
+# 12. Done (Create Drupal Site)
+SITE_LOCATION="$(pwd -P)"
+SITE_URL="https://${PROJECT_NAME}.ddev.site"
+if command -v jq >/dev/null 2>&1; then
+  _dd_json=$(ddev describe -j 2>/dev/null || true)
+  _primary_url=$(echo "$_dd_json" | jq -r '.raw.primary_url // .primary_url // empty' 2>/dev/null || true)
+  if [ -z "$_primary_url" ] || [ "$_primary_url" = "null" ]; then
+    _primary_url=$(echo "$_dd_json" | jq -r '.raw.httpsURLs[0] // empty' 2>/dev/null || true)
+  fi
+  if [ -n "$_primary_url" ] && [ "$_primary_url" != "null" ]; then
+    SITE_URL="$_primary_url"
+  fi
 fi
+echo ""
+echo "==="
+echo "Created a Drupal site \"${SITE_NAME}\" at ${SITE_LOCATION}, with theme \"${THEME_NAME}\"."
+echo "Site is available for local development at ${SITE_URL}"
+if [ "$THEME_SHOULD_BUILD" = true ] && [ -f "$THEME_PATH/package.json" ]; then
+  THEME_NPM_WATCH_SCRIPT=""
+  if grep -qE '"dev"[[:space:]]*:' "$THEME_PATH/package.json"; then
+    THEME_NPM_WATCH_SCRIPT="dev"
+  elif grep -qE '"watch"[[:space:]]*:' "$THEME_PATH/package.json"; then
+    THEME_NPM_WATCH_SCRIPT="watch"
+  fi
+  if [ -n "$THEME_NPM_WATCH_SCRIPT" ]; then
+    echo "Run 'npm run $THEME_NPM_WATCH_SCRIPT' in $THEME_PATH when developing to watch and rebuild styles."
+  fi
+fi
+echo "==="
+ddev launch $(ddev drush uli)

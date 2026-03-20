@@ -19,9 +19,9 @@ From the directory where you want the Drupal app (e.g. parent of this project), 
 curl -fsSL https://raw.githubusercontent.com/firflant/create-drupal-site/main/create-drupal-site.sh | bash
 ```
 
-The script will prompt for **site name** (default "My site") and **DDEV project name** (default kebab-case of site name), then:
+The script will prompt for **site name** (default "My site"), **local project subdomain** (default kebab-case of site name; with DDEV this becomes your hostname, e.g. `https://my-site.ddev.site`), and **installation directory** (default: same as the subdomain), then:
 
-- Create `app`, install Drupal minimal, require contrib modules, fetch the [Tailwind theme](https://github.com/firflant/tailwind-canvas) from GitHub
+- Create that directory (relative to your current working directory), install Drupal minimal, require contrib modules, fetch the [Tailwind theme](https://github.com/firflant/tailwind-canvas) from GitHub
 - Apply core recipes (admin theme, page content type, content editor role, basic HTML editor, image media type)
 - Enable Canvas and other modules plus Tailwind theme, copy this project’s config into `config/sync`, set front page to `/node`, import config
 - Build theme styles, clear cache, launch, and print a one-time login link
